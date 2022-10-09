@@ -1,5 +1,3 @@
-#include "json.hpp"
-
 #include "EcnTcpClient.hpp"
 
 using boost::asio::ip::tcp;
@@ -8,44 +6,106 @@ EcnTcpClient::EcnTcpClient(const EcnTcpClient::Address& serverAddress, short ser
     : m_serverAddress(serverAddress), m_serverPort(serverPort), m_socket(m_socketCtx)
 { }
 
-std::string EcnTcpClient::SendRequest(
-    const std::string& sessionId,
-    const std::string& requestId,
-    const std::string& message)
+void EcnTcpClient::Start()
 {
-    tcp::endpoint endpoint(m_serverAddress, m_serverPort);
-    m_socket.open(endpoint.protocol());
-    m_socket.connect(endpoint);
+    tcp::endpoint ep(m_serverAddress, m_serverPort);
+    m_socket.connect(ep);
+}
 
-    SendMessage(sessionId, requestId, message);
-    std::string res = ReadMessage();
-
-    m_socket.close();
-
-    return res;
+std::string EcnTcpClient::SendRequest(
+    const std::string& requestId,
+    const nlohmann::json& message)
+{
+    SendMessage(requestId, message);
+    return ReadMessage();
 }
 
 // Отправка сообщения на сервер по шаблону.
 void EcnTcpClient::SendMessage(
-    const std::string& sessionId,
     const std::string& requestId,
-    const std::string& message)
+    const nlohmann::json& message)
 {
     nlohmann::json req;
-    req["SessionId"] = sessionId;
-    req["RequestId"] = requestId;
-    req["Message"] = message;
+    req[Key::RequestId] = requestId;
+    req[Key::Message] = message;
 
     std::string request = req.dump();
-    boost::asio::write(m_socket, boost::asio::buffer(request, request.size()));
+    boost::asio::write(m_socket, boost::asio::buffer(request.data(), request.size() + 1));
 }
 
 // Возвращает строку с ответом сервера на последний запрос.
 std::string EcnTcpClient::ReadMessage()
 {
-    boost::asio::streambuf b;
-    boost::asio::read_until(m_socket, b, "\0");
-    std::istream is(&b);
-    std::string line(std::istreambuf_iterator<char>(is), {});
-    return line;
+    std::string resp;
+    boost::asio::read_until(m_socket, boost::asio::dynamic_string_buffer(resp), '\0');
+    
+    return resp;
+}
+    
+std::string EcnTcpClient::SendOpenDealRequest(DealType dealType, unsigned long long count, double price)
+{
+    nlohmann::json message;
+    message[Key::Count] = count;
+    message[Key::Price] = price;
+
+    std::string reqId;
+    if (dealType == BuyType)
+    {
+        reqId = RequestId::Buy;
+    }
+    else
+    {
+        reqId = RequestId::Sell;
+    }
+
+    nlohmann::json respond = nlohmann::json::parse(SendRequest(reqId, message));
+
+    return respond[Key::Status].get<std::string>();
+}
+
+std::string EcnTcpClient::SendDealLogRequest(DealStatus dealStatus,  DealType dealType)
+{
+    nlohmann::json message;
+    if (dealType == BuyType)
+    {
+        message[Key::Deal] = Deal::Buy;
+    }
+    else
+    {
+        message[Key::Deal] = Deal::Sell;
+    }
+
+    std::string reqId;
+    if (dealStatus == ActiveStatus)
+    {
+        reqId = RequestId::ActiveDeals;
+    }
+    else
+    {
+        reqId = RequestId::ClosedDeals;
+    }
+
+    nlohmann::json respond = nlohmann::json::parse(SendRequest(reqId, message));
+
+    return respond[Key::Rows].dump();
+}
+
+std::string EcnTcpClient::SendLoginRequest(std::string name, std::string password)
+{
+    nlohmann::json message;
+    message[Key::Login] = name;
+    message[Key::Password] = password;
+    
+    nlohmann::json respond = nlohmann::json::parse(SendRequest(RequestId::Login, message));
+
+    return respond[Key::Status].get<std::string>();
+}
+
+std::pair<double, double> EcnTcpClient::SendGetBalanceRequest()
+{
+    nlohmann::json respond = nlohmann::json::parse(SendRequest(RequestId::Balance));
+    
+    auto rubBalance = respond[Key::RubBalance].get<double>();
+    auto usdBalance = respond[Key::UsdBalance].get<double>();
+    return { rubBalance, usdBalance };
 }

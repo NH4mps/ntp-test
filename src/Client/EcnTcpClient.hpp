@@ -3,6 +3,8 @@
 #include <iostream>
 #include <boost/asio.hpp>
 
+#include "json.hpp"
+
 #include "EcnCommon.hpp"
 
 class EcnTcpClient
@@ -19,19 +21,27 @@ public:
         return inst;
     }
 
+    void Start();
+
+    std::string SendOpenDealRequest(DealType dealType, unsigned long long count, double price);
+    
+    std::string SendDealLogRequest(DealStatus dealStatus, DealType dealType);
+    
+    std::string SendLoginRequest(std::string name, std::string password);
+
+    std::pair<double, double> SendGetBalanceRequest();
+    
 private:
     EcnTcpClient(const Address& serverAddress, short serverPort);
 
     std::string SendRequest(
-        const std::string& sessionId,
         const std::string& requestId,
-        const std::string& message);
+        const nlohmann::json& message = nlohmann::json());
 
     // Отправка сообщения на сервер по шаблону.
     void SendMessage(
-        const std::string& sessionId,
         const std::string& requestId,
-        const std::string& message);
+        const nlohmann::json& message);
 
     // Возвращает строку с ответом сервера на последний запрос.
     std::string ReadMessage();
