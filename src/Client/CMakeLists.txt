@@ -2,6 +2,7 @@ ADD_EXECUTABLE(Client
     main.cpp
     EcnTcpClient.cpp
     EcnTcpClient.hpp
+    LoginForm.hpp
     MenuPages/MainMenuPage.cpp
     MenuPages/MainMenuPage.hpp
     MenuPages/OpenDealMenuPage.cpp
