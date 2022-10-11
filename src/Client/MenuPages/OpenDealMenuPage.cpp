@@ -4,7 +4,7 @@
 
 #include "OpenDealMenuPage.hpp"
 
-static const std::string actions[] = { "купить" "продать"};
+static const std::string actions[] = { "купить", "продать"};
 
 void OpenDealMenuPage::Exec()
 {

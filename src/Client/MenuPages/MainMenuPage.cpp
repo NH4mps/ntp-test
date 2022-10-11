@@ -2,7 +2,6 @@
 
 #include "EcnTcpClient.hpp"
 
-#include "ActiveDealsMenuPage.hpp"
 #include "DealLogMenuPage.hpp"
 #include "BalanceMenuPage.hpp"
 #include "OpenDealMenuPage.hpp"

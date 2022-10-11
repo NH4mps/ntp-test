@@ -12,6 +12,7 @@ public:
 
     void Exec() override 
     {
+        system("clear"); 
         auto balances = EcnTcpClient::Instance().SendGetBalanceRequest();
 
         std::cout << "Для выхода введите любую последовательность символов" << std::endl << std::endl;
@@ -20,6 +21,7 @@ public:
 
         std::string str;
         std::cin >> str;
+        system("clear"); 
         return;
     }
 };
