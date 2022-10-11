@@ -73,11 +73,13 @@ void Post::CloseDeals()
     Db::Storage storage = Db::InitStorage();
 
     auto buyDeals = storage.get_all<Db::ActiveDeal>(
-        where(c(&Db::ActiveDeal::type) == BuyType), 
-        order_by(&Db::ActiveDeal::price).desc());
+        where(c(&Db::ActiveDeal::type) == static_cast<int>(BuyType)), 
+        multi_order_by( order_by(&Db::ActiveDeal::price).desc(),
+                        order_by(&Db::ActiveDeal::placedAt).asc()));
     auto sellDeals = storage.get_all<Db::ActiveDeal>(
-        where(c(&Db::ActiveDeal::type) == SellType), 
-        order_by(&Db::ActiveDeal::price).asc());
+        where(c(&Db::ActiveDeal::type) == static_cast<int>(SellType)), 
+        multi_order_by( order_by(&Db::ActiveDeal::price).asc(),
+                        order_by(&Db::ActiveDeal::placedAt).asc()));
 
     int i = 0;
     int j = 0;
@@ -107,10 +109,18 @@ void Post::CloseDeals()
             storage.remove<Db::ActiveDeal>(buyDeals[i].id);
             i++;
         }
+        else
+        {
+            storage.update<Db::ActiveDeal>(buyDeals[i]);
+        }
         if(sellDeals[j].count == 0)
         {
             storage.remove<Db::ActiveDeal>(sellDeals[j].id);
             j++;
+        }
+        else
+        {
+            storage.update<Db::ActiveDeal>(sellDeals[j]);
         }
     }
 }
@@ -229,15 +239,18 @@ void Responds::ActiveDealsRequestHandler(
 
     Db::Storage storage = Db::InitStorage();
 
-    auto rows = storage.get_all<Db::ActiveDeal>(where(c(&Db::ActiveDeal::placedBy) == userId));
-    std::vector<Db::ClosedDeal> rows;
+    std::vector<Db::ActiveDeal> rows;
     if (requestJson[Key::Message][Key::Deal].get<std::string>() == Deal::Buy)
     {
-    auto rows = storage.get_all<Db::ActiveDeal>(where(c(&Db::ActiveDeal::type) == BuyType));
+        rows = storage.get_all<Db::ActiveDeal>(
+            where(c(&Db::ActiveDeal::type) == static_cast<int>(BuyType) && 
+                  c(&Db::ActiveDeal::placedBy) == userId));
     }
     else
     {
-        auto rows = storage.get_all<Db::ActiveDeal>(where(c(&Db::ActiveDeal::type) == SellType));
+        rows = storage.get_all<Db::ActiveDeal>(
+            where(c(&Db::ActiveDeal::type) == static_cast<int>(SellType) &&
+                  c(&Db::ActiveDeal::placedBy) == userId));
     }
 
     nlohmann::json respond;
@@ -246,7 +259,13 @@ void Responds::ActiveDealsRequestHandler(
     respond[Key::Rows] = nlohmann::json::array();
     for (auto& row : rows)
     {
-        respond[Key::Rows].push_back(nlohmann::json::parse(storage.dump(row)));
+        nlohmann::json rowObj;
+        rowObj[Key::Log::Id] = row.id;
+        rowObj[Key::Log::Price] = row.price;
+        rowObj[Key::Log::Count] = row.count;
+        rowObj[Key::Log::PlacedAt] = row.placedAt;
+
+        respond[Key::Rows].push_back(rowObj);
     }
 
     ostream << respond.dump();
@@ -281,7 +300,13 @@ void Responds::ClosedDealsRequestHandler(
     respond[Key::Rows] = nlohmann::json::array();
     for (auto& row : rows)
     {
-        respond[Key::Rows].push_back(nlohmann::json::parse(storage.dump(row)));
+        nlohmann::json rowObj;
+        rowObj[Key::Log::Id] = row.id;
+        rowObj[Key::Log::Price] = row.price;
+        rowObj[Key::Log::Count] = row.count;
+        rowObj[Key::Log::PlacedAt] = row.placedAt;
+
+        respond[Key::Rows].push_back(rowObj);
     }
 
     ostream << respond.dump();

@@ -32,6 +32,14 @@ inline const std::string stringify(Rows);
 inline const std::string stringify(Deal);
 inline const std::string stringify(RubBalance);
 inline const std::string stringify(UsdBalance);
+
+namespace Log
+{
+inline const std::string stringify(Id);
+inline const std::string stringify(Count);
+inline const std::string stringify(Price);
+inline const std::string stringify(PlacedAt);
+}
 };
 
 namespace RequestId

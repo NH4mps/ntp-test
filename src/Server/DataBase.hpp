@@ -37,17 +37,18 @@ struct ClosedDeal
     std::time_t placedAt;
 };
 
+inline const std::string fileName = "ntp.db";
 
 inline auto InitStorage()
 {
     using namespace sqlite_orm;
-    return make_storage("ntp.db",
+    return make_storage(fileName,
         make_table("users",
             make_column("id", &User::id, autoincrement(), primary_key()),
             make_column("name", &User::name, unique()),
             make_column("password_hash", &User::passwordHash),
-            make_column("balance", &User::balanceRub),
-            make_column("balance", &User::balanceUsd)),
+            make_column("balance_rub", &User::balanceRub),
+            make_column("balance_usd", &User::balanceUsd)),
         make_table("opened_deals",
             make_column("id", &ActiveDeal::id, autoincrement(), primary_key()),
             make_column("count", &ActiveDeal::count),
